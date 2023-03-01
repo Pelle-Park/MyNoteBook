@@ -1,34 +1,32 @@
-import React, { useState } from "react";
-import { TextInput, StyleSheet, Text, View } from "react-native";
+import { useState } from "react";
+import { TextInput, StyleSheet, View } from "react-native";
 
 function TextEditor( {route} ) {
-    const [title, setTitle] = useState(route.params.note.title)
-    const [body, setBody] = useState(route.params.note.body)
-    const updateBody = route.params.updateBody
-    const index = route.params.index
+  const [note, setNote] = useState(route.params.note);
 
-
-    return (
-      <View>
-        <TextInput 
-          style={styles.titleContainer}
-          value={title}
-          onChangeText={(text) => {
-            setTitle(text)
-            updateBody({title: text, body: body}, index)
-          }}
-        />
-        <TextInput 
-          style={styles.bodyContainer}
-          value={body} 
-          onChangeText={(text) => {
-            setBody(text)
-            updateBody({title: title, body: text}, index)
-          }}
-        />
-      </View>
-    );
+  const onSaveNote = () => {
+    route.params.func(note);
   }
+
+  const changeText = (text) => {
+    setNote({
+      ...note,
+      text: text
+    });
+  };
+
+  return (
+    <View>
+      <TextInput 
+        style={styles.titleContainer}
+        value={note.text}
+        placeholder="write note here"
+        onChangeText={changeText}
+        onBlur={onSaveNote}
+      />
+    </View>
+  );
+}
 
   const styles = StyleSheet.create({
     titleContainer: {

@@ -1,48 +1,58 @@
-import React, { useState } from "react";
+import { useState, useEffect } from "react";
 import { View, Text, TouchableOpacity, StyleSheet, FlatList } from "react-native";
+import { collection, addDoc, onSnapshot, updateDoc, doc } from 'firebase/firestore';
+import { database } from '../config/firebase';
 
-function HomeScreen( {navigation}) {
-  const [notes, setNotes] = useState([
-    {title: 'shopping', body: 'remember eggs and milk'},
-    {title: 'programming', body: 'NO INFINITE LOOPS!'},
-    {title: 'daily reminder', body: 'have a good day :)'},
-  ])
+function HomeScreen( {navigation} ) {
+  const [notes, setNotes] = useState([])
 
-  const updateBody = (text, index) => {
-    setNotes((prevNotes) => {
-      prevNotes[index] = text;
-      return [...prevNotes]
+  useEffect(() => {
+    const unsub = onSnapshot(collection(database, 'notes'), (snapshot) => {
+      const notesData = snapshot.docs.map((doc) => ({
+        id: doc.id,
+        ...doc.data(),
+      }));
+      setNotes(notesData);
     });
-  }
+    return unsub;
+  }, []);
 
-  const editNote = (item, index) => {
-    navigation.navigate('TextEditor', {note: item, index: index, updateBody: updateBody});
-  }
-  
-  const addNote = () => {
-    setNotes((prevNotes) => [
-      ...prevNotes,
-      { title: '', body: '' },
-    ]);
-    navigation.navigate('TextEditor', { note: [{title: '', body: ''}], index: notes.length, updateBody: updateBody });
+  const saveNoteToFirestore = async (note) => {
+    const newNote = {
+      text: note.text,
+    };
+    const docRef = await addDoc(collection(database, 'notes'), newNote);
+    console.log('Document written with ID: ', docRef.id);
   };
 
-    return (
-      <View style={styles.container}>
-        <FlatList 
-          data={notes}
-          renderItem={({item, index}) => (
-            <TouchableOpacity style={styles.textContainer} onPress={() => editNote(item, index)}>
-              <Text>{item.title}</Text>
-            </TouchableOpacity>
-          )}
-        />
-        <TouchableOpacity style={styles.button} onPress={addNote}>
-          <Text style={styles.buttonText}>+</Text>
-        </TouchableOpacity>
-      </View>
-    );
-  }
+  const updateNoteInFirestore = async (note) => {
+    const newNote = {
+      text: note.text,
+    };
+    await updateDoc(doc(database, 'notes', note.id), newNote);
+    console.log('Document updated with ID: ', note.id);
+  };
+
+  return (
+    <View style={styles.container}>
+      <FlatList 
+        data={notes}
+        renderItem={({item}) => (
+          <TouchableOpacity style={styles.textContainer} onPress={() => {
+            navigation.navigate('TextEditor', {func: updateNoteInFirestore, note: item})
+          }}>
+            <Text>{item.text}</Text>
+          </TouchableOpacity>
+        )}
+      />
+      <TouchableOpacity style={styles.button} onPress={() => {
+        navigation.navigate('TextEditor', {func: saveNoteToFirestore, note: {id: '', text: ''}})
+      }}>
+        <Text style={styles.buttonText}>+</Text>
+      </TouchableOpacity>
+    </View>
+  );
+}
 
   const styles = StyleSheet.create({
     container: {
